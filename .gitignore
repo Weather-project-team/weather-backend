@@ -37,4 +37,4 @@ out/
 .vscode/
 
 # Ignore application-git.properties (API keys and sensitive config)
-backend/src/main/resources/application-git.properties
+src/main/resources/application-git.properties
