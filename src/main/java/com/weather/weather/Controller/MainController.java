@@ -13,6 +13,6 @@ public class MainController {
 
     @GetMapping
     public ResponseEntity<String> mainPage() {
-        return ResponseEntity.ok("OAuth2 구글 로그인 성공! 메인 페이지입니다.");
+        return ResponseEntity.ok("OAuth2 로그인 성공! 메인 페이지입니다.");
     }
 }
