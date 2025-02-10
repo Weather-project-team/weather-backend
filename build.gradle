@@ -40,11 +40,11 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 	// ❌ WebFlux 제거 가능 (RestTemplate 사용 중이므로 필요 없음)
-	// implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	 implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	 implementation 'org.springframework.boot:spring-boot-starter-security'
+	 testImplementation 'org.springframework.security:spring-security-test'
+	 implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
-	// ❌ Security 미사용 시 주석 유지
-	// implementation 'org.springframework.boot:spring-boot-starter-security'
-	// testImplementation 'org.springframework.security:spring-security-test'
 }
 
 tasks.named('test') {
