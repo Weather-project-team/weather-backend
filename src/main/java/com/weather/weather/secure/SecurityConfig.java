@@ -18,11 +18,20 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // CSRF 비활성화
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 설정 추가
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/oauth2/**", "/api/weather/**").permitAll() // 특정 요청 허용
+                        .requestMatchers("/", "/oauth2/**", "/api/user/me").permitAll() // 특정 요청 허용
                         .anyRequest().authenticated() // 그 외는 인증 필요
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .defaultSuccessUrl("/main", true)
+                        .successHandler((request, response, authentication) -> {
+                            response.sendRedirect("http://localhost:5173/oauth2/redirect");
+                        })
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(200);
+                            response.sendRedirect("http://localhost:5173");
+                        })
                 );
 
         return http.build();
@@ -31,7 +40,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
