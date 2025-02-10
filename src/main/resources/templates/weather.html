@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Weather Info</title>
+</head>
+<body>
+<h1>Weather Information</h1>
+
+<form action="/weather" method="get">
+    <label for="city">Enter City:</label>
+    <input type="text" id="city" name="city" placeholder="Enter City">
+    <button type="submit">Search</button>
+</form>
+
+<div th:if="${weather}">
+    <h2>Weather for <span th:text="${city}"></span></h2>
+    <ul>
+        <li th:each="entry : ${weather}">
+            <strong th:text="${entry.key}"></strong>: <span th:text="${entry.value}"></span>
+        </li>
+    </ul>
+</div>
+
+<div th:if="${error}">
+    <p th:text="${error}" style="color: red;"></p>
+</div>
+</body>
+</html>
