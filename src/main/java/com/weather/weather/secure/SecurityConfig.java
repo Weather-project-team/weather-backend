@@ -18,7 +18,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // CSRF 비활성화
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 설정 추가
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/oauth2/**", "/api/user/me").permitAll() // 특정 요청 허용
+                        .requestMatchers("/", "/oauth2/**", "/api/user/me", "/api/weather/**").permitAll() // 특정 요청 허용
                         .anyRequest().authenticated() // 그 외는 인증 필요
                 )
                 .oauth2Login(oauth2 -> oauth2
