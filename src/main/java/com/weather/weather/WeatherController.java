@@ -26,4 +26,10 @@ public class WeatherController {
             return Map.of("error", "날씨 데이터를 가져오지 못했습니다.");
         }
     }
+
+    @GetMapping("/nearest-city")
+    public Map<String, String> getNearestCity(@RequestParam double lat, @RequestParam double lon) {
+        String city = weatherService.findClosestCity(lat, lon);
+        return Map.of("city", city);
+    }
 }
