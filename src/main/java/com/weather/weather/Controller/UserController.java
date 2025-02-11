@@ -21,11 +21,24 @@ public class UserController {
         }
 
         OAuth2User user = (OAuth2User) authentication.getPrincipal();
-        Map<String, Object> userInfo = Map.of(
-                "name", user.getAttribute("name"),
-                "email", user.getAttribute("email"),
-                "picture", user.getAttribute("picture")
-        );
+        String provider = user.getAttribute("iss") != null ? "google" : "kakao";  // Provider 구분
+
+        Map<String, Object> userInfo;
+        if ("google".equals(provider)) {
+            userInfo = Map.of(
+                    "name", user.getAttribute("name"),         // 사용자 이름
+                    "email", user.getAttribute("email"),       // 이메일
+                    "picture", user.getAttribute("picture")    // 프로필 사진
+            );
+        } else {
+            Map<String, Object> kakaoAccount = (Map<String, Object>) user.getAttribute("kakao_account");
+            Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+
+            userInfo = Map.of(
+                    "nickname", profile.get("nickname"),                 // 카카오 닉네임
+                    "profile_image", profile.get("profile_image_url")    // 프로필 사진
+            );
+        }
 
         return ResponseEntity.ok(userInfo);
     }
