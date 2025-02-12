@@ -123,6 +123,9 @@ public class WeatherService {
         }
 
         Map<String, String> formattedData = new LinkedHashMap<>();
+        String skyCondition = "";
+        String precipitationType = "";
+
         try {
             Map responseBody = (Map) ((Map) weatherData.get("response")).get("body");
             List<Map<String, Object>> items = (List<Map<String, Object>>) ((Map) responseBody.get("items")).get("item");
@@ -141,13 +144,22 @@ public class WeatherService {
                         formattedData.put("windSpeed", value + " m/s");
                         break;
                     case "PTY":
-                        formattedData.put("precipitationType", getPrecipitationType(value));
+                        precipitationType = getPrecipitationType(value);
+                        formattedData.put("precipitationType", precipitationType); // ✅ PTY 추가
+                        break;
+                    case "SKY":
+                        skyCondition = getSkyCondition(value);
+                        formattedData.put("skyCondition", skyCondition);
                         break;
                     default:
                         formattedData.put(category, value);
                         break;
                 }
             }
+
+            // ✅ PTY + SKY 조합한 날씨 설명 추가
+            formattedData.put("weatherDescription", generateWeatherDescription(skyCondition, precipitationType));
+
         } catch (Exception e) {
             System.err.println("🚨 데이터 파싱 중 오류 발생: " + e.getMessage());
             return Map.of("error", "날씨 데이터 파싱 중 오류가 발생했습니다.");
@@ -155,16 +167,39 @@ public class WeatherService {
         return formattedData;
     }
 
-    private String getPrecipitationType(String value) {
+
+    private String getSkyCondition(String value) {
         switch (value) {
-            case "0": return "No precipitation";
-            case "1": return "Rain";
-            case "2": return "Rain/Snow mixed";
-            case "3": return "Snow";
-            case "4": return "Shower";
-            default: return "Unknown";
+            case "1": return "맑음";  // Clear
+            case "3": return "구름많음"; // Partly Cloudy
+            case "4": return "흐림";  // Cloudy
+            default: return "알 수 없음"; // Unknown
         }
     }
+
+    private String getPrecipitationType(String value) {
+        switch (value) {
+            case "0": return "강수 없음";
+            case "1": return "비";
+            case "2": return "비/눈";
+            case "3": return "눈";
+            case "4": return "소나기";
+            case "5": return "빗방울";
+            case "6": return "빗방울/눈날림";
+            case "7": return "눈날림";
+            default: return "알 수 없음";
+        }
+    }
+
+
+
+    private String generateWeatherDescription(String skyCondition, String precipitationType) {
+        if ("강수 없음".equals(precipitationType)) {
+            return skyCondition; // 강수 없으면 하늘 상태만 표시
+        }
+        return precipitationType + " (" + skyCondition + ")"; // 예: "비 (구름많음)"
+    }
+
 
     private Map<String, Object> getWeatherData(String city) {
         String baseDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
