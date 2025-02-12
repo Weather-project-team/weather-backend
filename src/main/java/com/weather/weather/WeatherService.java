@@ -40,6 +40,12 @@ public class WeatherService {
         }
     }
 
+    public List<String> getCityNames() {
+        List<String> cityList = new ArrayList<>(cityCoordinates.keySet());
+        Collections.sort(cityList); // 가나다순 정렬
+        return cityList;
+    }
+
     // 기상청 좌표 변환을 위한 상수 추가
     private static final double RE = 6371.00877; // 지구 반경(km)
     private static final double GRID = 5.0; // 격자 간격(km)
@@ -157,9 +163,6 @@ public class WeatherService {
                 }
             }
 
-            // ✅ PTY + SKY 조합한 날씨 설명 추가
-            formattedData.put("weatherDescription", generateWeatherDescription(skyCondition, precipitationType));
-
         } catch (Exception e) {
             System.err.println("🚨 데이터 파싱 중 오류 발생: " + e.getMessage());
             return Map.of("error", "날씨 데이터 파싱 중 오류가 발생했습니다.");
@@ -189,15 +192,6 @@ public class WeatherService {
             case "7": return "눈날림";
             default: return "알 수 없음";
         }
-    }
-
-
-
-    private String generateWeatherDescription(String skyCondition, String precipitationType) {
-        if ("강수 없음".equals(precipitationType)) {
-            return skyCondition; // 강수 없으면 하늘 상태만 표시
-        }
-        return precipitationType + " (" + skyCondition + ")"; // 예: "비 (구름많음)"
     }
 
 
