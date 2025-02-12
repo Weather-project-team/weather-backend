@@ -17,7 +17,7 @@ import java.util.*;
 @Service
 public class WeatherService {
 
-    private static final String API_URL = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst";
+    private static final String API_URL = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst";
     private static final String SERVICE_KEY = "hNQQGlEEAxRJBkdL1VFgEmEDkpw5QWrK0cK3BJ0lx0mHufYq3ruuhwSS4uosgUFQDKNOOMB2fWW0iiQWJb76GA==";
 
     private final RestTemplate restTemplate;
@@ -138,7 +138,7 @@ public class WeatherService {
 
             for (Map<String, Object> item : items) {
                 String category = (String) item.get("category");
-                String value = item.get("obsrValue").toString();
+                String value = item.get("fcstValue").toString();
                 switch (category) {
                     case "T1H":
                         formattedData.put("temperature", value + "°C");
@@ -208,7 +208,7 @@ public class WeatherService {
         URI uri = UriComponentsBuilder.fromHttpUrl(API_URL)
                 .queryParam("serviceKey", encodedServiceKey)
                 .queryParam("dataType", "JSON")
-                .queryParam("numOfRows", 10)
+                .queryParam("numOfRows", 50)
                 .queryParam("pageNo", 1)
                 .queryParam("base_date", baseDate)
                 .queryParam("base_time", baseTime)
@@ -218,7 +218,12 @@ public class WeatherService {
                 .toUri();
 
         try {
-            return restTemplate.getForObject(uri, Map.class);
+            Map<String, Object> response = restTemplate.getForObject(uri, Map.class);
+
+            // ✅ SKY 데이터가 포함되는지 콘솔에 출력
+            System.out.println("🔍 기상청 API 응답 데이터: " + response);
+
+            return response;
         } catch (Exception e) {
             System.err.println("🚨 API 호출 중 오류 발생: " + e.getMessage());
             return Map.of("error", "날씨 데이터를 가져오지 못했습니다.");
