@@ -1,23 +1,23 @@
 package com.weather.weather.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Getter
-@Setter
+@Data
+@NoArgsConstructor
 public class Bookmark {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String location;  // 즐겨찾는 위치 (예: "Seoul", "Busan")
+    @Column(nullable = false)
+    private String location;  // 즐찾 도시명
 
+    @Column(nullable = false)
     private Long userId;  // 외래 키를 명시적으로 선언
 }
-
