@@ -85,19 +85,23 @@ public class WeatherService {
 
     // ✅ 현재 위치(위도, 경도)와 가장 가까운 도시 찾기
     public String findClosestCity(double userLat, double userLon) {
+        System.out.println("✅ 현재 위도: " + userLat + ", 경도: " + userLon); // 디버깅 출력
+
+        int[] userGrid = latitudeLongitudeToGrid(userLat, userLon); // 사용자의 위치를 격자로 변환
+        int userNx = userGrid[0];
+        int userNy = userGrid[1];
+
+        System.out.println("✅ 변환된 격자 좌표: nx=" + userNx + ", ny=" + userNy);
+
         String closestCity = null;
         double minDistance = Double.MAX_VALUE;
 
         for (Map.Entry<String, Integer[]> entry : cityCoordinates.entrySet()) {
             String city = entry.getKey();
-            Integer[] grid = entry.getValue();
+            Integer[] grid = entry.getValue(); // 도시의 격자 좌표 (nx, ny)
 
-            // ✅ 격자 좌표를 위경도로 변환
-            double[] latLon = gridToLatitudeLongitude(grid[0], grid[1]);
-            double lat = latLon[0];
-            double lon = latLon[1];
-
-            double distance = haversine(userLat, userLon, lat, lon);
+            // 격자 거리 비교 (하버사인 대신 간단한 거리 계산 사용)
+            double distance = Math.sqrt(Math.pow(userNx - grid[0], 2) + Math.pow(userNy - grid[1], 2));
 
             if (distance < minDistance) {
                 minDistance = distance;
@@ -105,8 +109,37 @@ public class WeatherService {
             }
         }
 
+        System.out.println("🎯 가장 가까운 도시: " + closestCity);
         return closestCity;
     }
+
+
+    private int[] latitudeLongitudeToGrid(double lat, double lon) {
+        double DEGRAD = Math.PI / 180.0;
+        double re = RE / GRID;
+        double slat1 = SLAT1 * DEGRAD;
+        double slat2 = SLAT2 * DEGRAD;
+        double olon = OLON * DEGRAD;
+        double olat = OLAT * DEGRAD;
+
+        double sn = Math.tan(Math.PI * 0.25 + slat2 * 0.5) / Math.tan(Math.PI * 0.25 + slat1 * 0.5);
+        sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn);
+        double sf = Math.pow(Math.tan(Math.PI * 0.25 + slat1 * 0.5), sn) * Math.cos(slat1) / sn;
+        double ro = Math.pow(Math.tan(Math.PI * 0.25 + olat * 0.5), -sn) * sf * re;
+
+        double ra = Math.pow(Math.tan(Math.PI * 0.25 + lat * DEGRAD * 0.5), -sn) * sf * re;
+        double theta = lon * DEGRAD - olon;
+        if (theta > Math.PI) theta -= 2.0 * Math.PI;
+        if (theta < -Math.PI) theta += 2.0 * Math.PI;
+        theta *= sn;
+
+        int x = (int) Math.floor(ra * Math.sin(theta) + XO + 0.5);
+        int y = (int) Math.floor(ro - ra * Math.cos(theta) + YO + 0.5);
+
+        return new int[]{x, y};
+    }
+
+
 
     // ✅ 하버사인 공식 (거리 계산)
     private double haversine(double lat1, double lon1, double lat2, double lon2) {
