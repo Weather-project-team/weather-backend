@@ -1,4 +1,4 @@
-package com.weather.weather.Controller;
+package com.weather.weather.controller;
 
 import com.weather.weather.entity.User;
 import com.weather.weather.repository.UserRepository;
@@ -41,9 +41,9 @@ public class UserController {
         // 사용자 정보 반환
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("id", user.getId());
-        userInfo.put("name", user.getName());
+        userInfo.put("name", user.getUsername());
         userInfo.put("email", user.getEmail() != null ? user.getEmail() : "No email provided");
-        userInfo.put("nickname", user.getNickname() != null ? user.getNickname() : user.getName());
+        userInfo.put("nickname", user.getNickname() != null ? user.getNickname() : user.getUsername());
         userInfo.put("profileImage", user.getProfileImage());
         userInfo.put("provider", user.getProvider());
 
@@ -67,13 +67,13 @@ public class UserController {
         newUser.setProviderId(providerId);
 
         if (provider.equals("google")) {
-            newUser.setName(oauth2User.getAttribute("name"));
+            newUser.setUsername(oauth2User.getAttribute("name"));
             newUser.setEmail(oauth2User.getAttribute("email"));
             newUser.setProfileImage(oauth2User.getAttribute("picture"));
         } else if (provider.equals("kakao")) {
             Map<String, Object> kakaoAccount = (Map<String, Object>) oauth2User.getAttribute("kakao_account");
             Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-            newUser.setName((String) profile.get("nickname"));
+            newUser.setUsername((String) profile.get("nickname"));
             newUser.setProfileImage((String) profile.get("profile_image_url"));
 
             if (kakaoAccount.containsKey("email")) {
