@@ -27,15 +27,27 @@ public class BookmarkController {
     }
 
     // 즐찾 삭제
+    // DELETE 요청에는 @RequestParam 사용해야 함
     @DeleteMapping
-    public ResponseEntity<?> removeBookmark(@RequestBody BookmarkRequestDTO request) {
-        bookmarkService.removeBookmark(request.getUserId(), request.getLocation());
-        return ResponseEntity.ok("즐겨찾기에서 삭제되었습니다.");
+    public ResponseEntity<?> removeBookmark(@RequestParam Long userId, @RequestParam String location) {
+        try {
+            bookmarkService.removeBookmark(userId, location);
+            return ResponseEntity.ok("즐겨찾기에서 삭제되었습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     // 즐찾 조회
-    @PostMapping("/list")
-    public ResponseEntity<List<String>> getBookmarks(@RequestBody BookmarkRequestDTO request) {
-        return ResponseEntity.ok(bookmarkService.getUserBookmarks(request.getUserId()));
+    // GET 요청에도 @RequestParam 사용해야 함
+    @GetMapping
+    public ResponseEntity<?> getBookmarks(@RequestParam Long userId) {
+        try {
+            List<String> bookmarks = bookmarkService.getUserBookmarks(userId);
+            return ResponseEntity.ok(bookmarks);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
+
 }
