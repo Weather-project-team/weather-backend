@@ -87,16 +87,72 @@ public class WeatherService {
     }
 
 
-    // ✅ 현재 위치(위도, 경도)와 가장 가까운 도시 찾기
     public String findClosestCity(double userLat, double userLon) {
         int[] userGrid = latitudeLongitudeToGrid(userLat, userLon);
 
-        // 🚀 GPS 오차 보정을 적용하여 가장 가까운 도시 찾기
-        String closestCity = adjustCoordinatesToNearestGrid(userGrid[0], userGrid[1]);
+        // 🚀 이미 adjustCoordinatesToNearestGrid()에서 가장 가까운 도시를 반환하도록 수정
+        return adjustCoordinatesToNearestGrid(userGrid[0], userGrid[1]);
+    }
 
-        System.out.println("✅ [최종] 선택된 가장 가까운 도시: " + closestCity);
+    private String adjustCoordinatesToNearestGrid(int nx, int ny) {
+        String closestCity = null;
+        double minDistance = Double.MAX_VALUE;
+        Integer closestNx = null; // ✅ 숫자 비교 전 null 체크
+        Integer closestNy = null; // ✅ 숫자 비교 전 null 체크
+
+        System.out.println("🚀 [디버깅] 현재 GPS 변환된 좌표: nx=" + nx + ", ny=" + ny);
+
+        for (Map.Entry<String, Integer[]> entry : cityCoordinates.entrySet()) {
+            int gridNx = entry.getValue()[0];
+            int gridNy = entry.getValue()[1];
+            String city = entry.getKey();
+
+            // ✅ 현재 좌표(nx, ny)에서 ±2 이상 차이나면 비교 대상에서 제외
+            if (Math.abs(nx - gridNx) > 2 || Math.abs(ny - gridNy) > 2) {
+                continue;
+            }
+
+            // 🚀 유클리드 거리 계산
+            double distance = Math.sqrt(Math.pow(nx - gridNx, 2) + Math.pow(ny - gridNy, 2));
+
+            System.out.println("🔍 [비교 대상] " + city + " | JSON 좌표: (" + gridNx + ", " + gridNy + ") | 거리: " + distance);
+
+            // ✅ 가장 가까운 거리 업데이트
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestCity = city;
+                closestNx = gridNx;
+                closestNy = gridNy;
+            }
+            // ✅ 거리가 같은 경우, nx와 ny 기준 적용
+            else if (distance == minDistance) {
+                // 1️⃣ nx가 현재 위치(nx)와 같은 경우 선택 (null 체크 추가)
+                if (closestNx == null || (gridNx == nx && closestNx != nx)) {
+                    closestCity = city;
+                    closestNx = gridNx;
+                    closestNy = gridNy;
+                }
+                // 2️⃣ nx까지 같다면, ny가 더 가까운 곳 선택 (null 체크 추가)
+                else if (gridNx == closestNx && closestNy != null && Math.abs(ny - gridNy) < Math.abs(ny - closestNy)) {
+                    closestCity = city;
+                    closestNy = gridNy;
+                }
+            }
+        }
+
+        // ✅ 에러 방지를 위해 null 체크 후 반환
+        if (closestCity == null) {
+            System.err.println("🚨 [오류] 가까운 도시를 찾지 못했습니다. 기본값 반환.");
+            return "위치 찾기 실패";
+        }
+
+        System.out.println("🎯 [결과] 선택된 가장 가까운 도시: " + closestCity);
         return closestCity;
     }
+
+
+
+
 
 
     private int[] latitudeLongitudeToGrid(double lat, double lon) {
@@ -249,50 +305,6 @@ public class WeatherService {
             return Map.of("error", "날씨 데이터를 가져오지 못했습니다.");
         }
     }
-
-    private String adjustCoordinatesToNearestGrid(int nx, int ny) {
-        String closestCity = null;
-        double minDistance = Double.MAX_VALUE;
-        boolean isSameDistance = false; // 🚀 거리 같은 경우 우선순위 적용
-
-        System.out.println("🚀 [디버깅] 현재 GPS 변환된 좌표: nx=" + nx + ", ny=" + ny);
-
-        for (Map.Entry<String, Integer[]> entry : cityCoordinates.entrySet()) {
-            int gridNx = entry.getValue()[0];
-            int gridNy = entry.getValue()[1];
-            String city = entry.getKey();
-
-            // ✅ 현재 좌표(nx, ny)에서 ±2 이상 차이나면 비교 대상에서 제외
-            if (Math.abs(nx - gridNx) > 2 || Math.abs(ny - gridNy) > 2) {
-                continue;
-            }
-
-            // 🚀 유클리드 거리 계산
-            double distance = Math.sqrt(Math.pow(nx - gridNx, 2) + Math.pow(ny - gridNy, 2));
-
-            System.out.println("🔍 [비교 대상] " + city + " | JSON 좌표: (" + gridNx + ", " + gridNy + ") | 거리: " + distance);
-
-            // ✅ 더 가까운 도시 찾기 (거리 비교)
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestCity = city;
-                isSameDistance = false; // 새로운 최소 거리 발견 -> 동일 거리 우선순위 해제
-            }
-            // ✅ 거리가 같을 경우, 우선순위 적용
-            else if (distance == minDistance) {
-                // 1️⃣ nx 값이 같으면 ny 차이가 적은 곳 선택
-                if (gridNx == nx && Math.abs(ny - gridNy) < Math.abs(ny - Integer.parseInt(closestCity.split(" ")[2]))) {
-                    closestCity = city;
-                    isSameDistance = true;
-                }
-                // 2️⃣ nx, ny 모두 같으면 기존 선택 유지
-            }
-        }
-
-        System.out.println("🎯 [결과] 선택된 가장 가까운 도시: " + closestCity);
-        return closestCity;
-    }
-
 
 
     private String getLatestBaseTime() {
