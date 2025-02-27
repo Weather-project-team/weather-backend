@@ -22,4 +22,3 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
     // ✅ 특정 사용자의 특정 도시 즐겨찾기 삭제
     void deleteByUserIdAndLocation(Long userId, String location);
 }
-
