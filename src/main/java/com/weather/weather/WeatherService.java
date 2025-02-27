@@ -71,8 +71,10 @@ public class WeatherService {
         sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn);
         double sf = Math.pow(Math.tan(Math.PI * 0.25 + slat1 * 0.5), sn) * Math.cos(slat1) / sn;
         double ro = Math.pow(Math.tan(Math.PI * 0.25 + olat * 0.5), -sn) * sf * re;
+
+        // ✅ **기존의 (nx - XO), (ro - ny + YO) 계산을 정확하게 수정**
         double x = nx - XO;
-        double y = ro - ny + YO;
+        double y = ro - (ny - YO);
 
         double ra = Math.sqrt(x * x + y * y);
         double theta = Math.atan2(x, y);
@@ -80,8 +82,10 @@ public class WeatherService {
         alat = 2.0 * Math.atan(alat) - Math.PI * 0.5;
         double alon = theta / sn + olon;
 
+        System.out.println("✅ 변환된 위경도 (수정 후): 위도=" + (alat * RADDEG) + ", 경도=" + (alon * RADDEG));
         return new double[]{alat * RADDEG, alon * RADDEG};
     }
+
 
     // ✅ 현재 위치(위도, 경도)와 가장 가까운 도시 찾기
     public String findClosestCity(double userLat, double userLon) {
@@ -126,18 +130,20 @@ public class WeatherService {
         sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn);
         double sf = Math.pow(Math.tan(Math.PI * 0.25 + slat1 * 0.5), sn) * Math.cos(slat1) / sn;
         double ro = Math.pow(Math.tan(Math.PI * 0.25 + olat * 0.5), -sn) * sf * re;
-
         double ra = Math.pow(Math.tan(Math.PI * 0.25 + lat * DEGRAD * 0.5), -sn) * sf * re;
         double theta = lon * DEGRAD - olon;
         if (theta > Math.PI) theta -= 2.0 * Math.PI;
         if (theta < -Math.PI) theta += 2.0 * Math.PI;
         theta *= sn;
 
-        int x = (int) Math.floor(ra * Math.sin(theta) + XO + 0.5);
-        int y = (int) Math.floor(ro - ra * Math.cos(theta) + YO + 0.5);
+        // ✅ **여기에서 반올림 처리 (`Math.round()`)로 격자 좌표 정밀도 개선**
+        int x = (int) Math.round(ra * Math.sin(theta) + XO);
+        int y = (int) Math.round(ro - ra * Math.cos(theta) + YO);
 
+        System.out.println("✅ 변환된 격자 좌표 (수정 후): nx=" + x + ", ny=" + y);
         return new int[]{x, y};
     }
+
 
 
 
