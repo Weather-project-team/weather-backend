@@ -281,6 +281,34 @@ public class WeatherService {
 
         String encodedServiceKey = URLEncoder.encode(SERVICE_KEY, StandardCharsets.UTF_8);
 
+        // 🚀 1️⃣ 최초 요청
+        Map<String, Object> response = requestWeatherData(baseDate, baseTime, nx, ny, encodedServiceKey);
+
+        // 🚨 2️⃣ 만약 NO_DATA가 발생하면 ny 값을 ±1 조정하여 다시 요청
+        if (response == null || !isValidResponse(response)) {
+            System.out.println("🚨 API NO DATA! Retrying with adjusted coordinates...");
+
+            for (int offset = -1; offset <= 1; offset++) {
+                if (offset == 0) continue; // 이미 요청한 값은 제외
+
+                int newNy = ny + offset;
+                System.out.println("🔄 재요청: nx=" + nx + ", ny=" + newNy);
+
+                response = requestWeatherData(baseDate, baseTime, nx, newNy, encodedServiceKey);
+
+                if (response != null && isValidResponse(response)) {
+                    return response; // 유효한 데이터가 있으면 반환
+                }
+            }
+
+            return Map.of("error", "기상청 API에 해당 좌표의 데이터가 없습니다.");
+        }
+
+        return response;
+    }
+
+
+    private Map<String, Object> requestWeatherData(String baseDate, String baseTime, int nx, int ny, String encodedServiceKey) {
         URI uri = UriComponentsBuilder.fromHttpUrl(API_URL)
                 .queryParam("serviceKey", encodedServiceKey)
                 .queryParam("dataType", "JSON")
@@ -296,14 +324,29 @@ public class WeatherService {
         try {
             Map<String, Object> response = restTemplate.getForObject(uri, Map.class);
 
-            // ✅ SKY 데이터가 포함되는지 콘솔에 출력
-            System.out.println("🔍 기상청 API 응답 데이터: " + response);
+            if (response == null || !response.containsKey("response")) {
+                return Map.of("error", "NO_DATA");
+            }
 
+            System.out.println("🔍 기상청 API 응답 데이터 (nx=" + nx + ", ny=" + ny + "): " + response);
             return response;
         } catch (Exception e) {
             System.err.println("🚨 API 호출 중 오류 발생: " + e.getMessage());
             return Map.of("error", "날씨 데이터를 가져오지 못했습니다.");
         }
+    }
+
+    private boolean isValidResponse(Map<String, Object> response) {
+        if (response == null || !response.containsKey("response")) {
+            return false;
+        }
+
+        Map<String, Object> responseBody = (Map<String, Object>) response.get("response");
+        if (responseBody == null || !responseBody.containsKey("body")) {
+            return false;
+        }
+
+        return true;
     }
 
 
