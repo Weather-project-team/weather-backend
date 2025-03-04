@@ -1,9 +1,11 @@
 package com.weather.weather.controller;
 
 import com.weather.weather.entity.BookmarkRequestDTO;
+import com.weather.weather.entity.User;
 import com.weather.weather.service.BookmarkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,13 +19,12 @@ public class BookmarkController {
 
     // 즐찾 추가
     @PostMapping
-    public ResponseEntity<?> addBookmark(@RequestBody BookmarkRequestDTO request) {
-        try {
-            bookmarkService.addBookmark(request.getUserId(), request.getLocation());
-            return ResponseEntity.ok("즐겨찾기에 추가되었습니다.");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<?> addBookmark(
+            @AuthenticationPrincipal User user, // ✅ Spring Security 인증 객체에서 사용자 정보 가져오기
+            @RequestBody BookmarkRequestDTO request) {
+
+        bookmarkService.addBookmark(user.getId(), request.getLocation());
+        return ResponseEntity.ok("즐겨찾기에 추가되었습니다.");
     }
 
     // 즐찾 삭제
