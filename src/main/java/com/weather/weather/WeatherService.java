@@ -205,16 +205,28 @@ public class WeatherService {
         }
 
         Map<String, String> formattedData = new LinkedHashMap<>();
-        String skyCondition = "";
-        String precipitationType = "";
 
         try {
             Map responseBody = (Map) ((Map) weatherData.get("response")).get("body");
             List<Map<String, Object>> items = (List<Map<String, Object>>) ((Map) responseBody.get("items")).get("item");
 
+            // ✅ 최신 예보 데이터만 저장 (각 category당 가장 가까운 시간 데이터 1개만 유지)
+            Map<String, Map<String, Object>> latestData = new HashMap<>();
+
             for (Map<String, Object> item : items) {
                 String category = (String) item.get("category");
-                String value = item.get("fcstValue").toString();
+                String fcstTime = item.get("fcstTime").toString();
+
+                if (!latestData.containsKey(category) || fcstTime.compareTo(latestData.get(category).get("fcstTime").toString()) < 0) {
+                    latestData.put(category, item);
+                }
+            }
+
+            // ✅ 중복 제거 후 정리
+            for (Map.Entry<String, Map<String, Object>> entry : latestData.entrySet()) {
+                String category = entry.getKey();
+                String value = entry.getValue().get("fcstValue").toString();
+
                 switch (category) {
                     case "T1H":
                         formattedData.put("temperature", value + "°C");
@@ -226,12 +238,10 @@ public class WeatherService {
                         formattedData.put("windSpeed", value + " m/s");
                         break;
                     case "PTY":
-                        precipitationType = getPrecipitationType(value);
-                        formattedData.put("precipitationType", precipitationType); // ✅ PTY 추가
+                        formattedData.put("precipitationType", getPrecipitationType(value));
                         break;
                     case "SKY":
-                        skyCondition = getSkyCondition(value);
-                        formattedData.put("skyCondition", skyCondition);
+                        formattedData.put("skyCondition", getSkyCondition(value));
                         break;
                     default:
                         formattedData.put(category, value);
@@ -245,6 +255,7 @@ public class WeatherService {
         }
         return formattedData;
     }
+
 
 
     private String getSkyCondition(String value) {
