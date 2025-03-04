@@ -16,7 +16,10 @@ public class BookmarkService {
 
     // ✅ 1️⃣ 사용자의 즐겨찾기 목록 가져오기
     public List<String> getUserBookmarks(Long userId) {
-        return bookmarkRepository.findBookmarksByUserId(userId);
+        return bookmarkRepository.findByUserId(userId)
+                .stream()
+                .map(Bookmark::getLocation)
+                .toList();
     }
 
     // ✅ 2️⃣ 즐겨찾기 추가
@@ -36,6 +39,11 @@ public class BookmarkService {
     // ✅ 3️⃣ 즐겨찾기 삭제
     @Transactional
     public void removeBookmark(Long userId, String location) {
+        // ✅ 존재하는 즐겨찾기인지 확인
+        if (!bookmarkRepository.findByUserIdAndLocation(userId, location).isPresent()) {
+            throw new RuntimeException("해당 도시가 즐겨찾기에 없습니다.");
+        }
         bookmarkRepository.deleteByUserIdAndLocation(userId, location);
     }
+
 }
