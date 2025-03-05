@@ -38,19 +38,18 @@ public class BookmarkController {
 
     // 즐찾 삭제
     @DeleteMapping
-    public ResponseEntity<?> removeBookmark(@AuthenticationPrincipal CustomOAuth2User user, @RequestParam String location) {
+    public ResponseEntity<?> removeBookmark(@AuthenticationPrincipal CustomOAuth2User user, @RequestBody BookmarkRequestDTO request) {
         try {
             // providerId를 기반으로 userId 조회
             User userEntity = userRepository.findByProviderAndProviderId(user.getProvider(), user.getProviderId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            bookmarkService.removeBookmark(userEntity.getId(), location);
+            bookmarkService.removeBookmark(userEntity.getId(), request.getLocation());
             return ResponseEntity.ok("즐겨찾기에서 삭제되었습니다.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
 
     // 즐찾 조회
     @GetMapping
