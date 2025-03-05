@@ -49,15 +49,21 @@ public class BookmarkController {
     }
 
     // 즐찾 조회
-    // GET 요청에도 @RequestParam 사용해야 함
     @GetMapping
-    public ResponseEntity<?> getBookmarks(@RequestParam Long userId) {
+    public ResponseEntity<?> getBookmarks(@AuthenticationPrincipal CustomOAuth2User user) {
         try {
-            List<String> bookmarks = bookmarkService.getUserBookmarks(userId);
+            // providerId를 기반으로 userId 조회
+            User userEntity = userRepository.findByProviderAndProviderId(user.getProvider(), user.getProviderId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // 사용자의 북마크 목록 조회
+            List<String> bookmarks = bookmarkService.getUserBookmarks(userEntity.getId());
+
             return ResponseEntity.ok(bookmarks);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
 
 }
