@@ -37,16 +37,20 @@ public class BookmarkController {
     }
 
     // 즐찾 삭제
-    // DELETE 요청에는 @RequestParam 사용해야 함
     @DeleteMapping
-    public ResponseEntity<?> removeBookmark(@RequestParam Long userId, @RequestParam String location) {
+    public ResponseEntity<?> removeBookmark(@AuthenticationPrincipal CustomOAuth2User user, @RequestParam String location) {
         try {
-            bookmarkService.removeBookmark(userId, location);
+            // providerId를 기반으로 userId 조회
+            User userEntity = userRepository.findByProviderAndProviderId(user.getProvider(), user.getProviderId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            bookmarkService.removeBookmark(userEntity.getId(), location);
             return ResponseEntity.ok("즐겨찾기에서 삭제되었습니다.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
 
     // 즐찾 조회
     @GetMapping
@@ -64,6 +68,5 @@ public class BookmarkController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
 
 }
