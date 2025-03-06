@@ -170,8 +170,13 @@ public class WeatherService {
     public Map<String, String> getFormattedWeatherData(String city) {
         Map<String, Object> weatherData = getWeatherData(city);
 
-        if (weatherData == null || !weatherData.containsKey("response")) {
-            return Map.of("error", "날씨 데이터를 가져오지 못했습니다.");
+        if (weatherData == null) {
+            return Map.of("error", "날씨 데이터를 가져오지 못했습니다. (응답 없음)");
+        }
+
+        if (!weatherData.containsKey("response")) {
+            System.out.println(weatherData + "1231212123");
+            return Map.of("error", "날씨 데이터를 가져오지 못했습니다. (response 없음)");
         }
 
         Map<String, String> formattedData = new LinkedHashMap<>();
@@ -252,9 +257,10 @@ public class WeatherService {
     }
 
 
+
     private Map<String, Object> getWeatherData(String city) {
-        boolean usePreviousDay = false; // 🚀 처음에는 현재 날짜 사용
-        String baseTime = getLatestBaseTime();
+        boolean usePreviousDay = false;
+        String baseTime = getLatestBaseTime(); // 가장 최근 base_time 가져오기
         String baseDate = getBaseDate(baseTime, usePreviousDay);
 
         Integer[] coordinates = cityCoordinates.getOrDefault(city, new Integer[]{60, 127});
@@ -266,43 +272,28 @@ public class WeatherService {
         // ✅ 1️⃣ 최초 요청
         Map<String, Object> response = requestWeatherData(baseDate, baseTime, nx, ny, encodedServiceKey);
 
-        // 🚨 2️⃣ `NO_DATA` 발생 시 `base_time` 조정 후 재요청
-        if (response == null || !isValidResponse(response)) {
+        // 🚨 NO_DATA 발생 시, 이전 base_time으로 재요청
+        while (response == null || !isValidResponse(response)) {
             System.out.println("🚨 NO DATA! Trying an earlier base_time...");
-            baseTime = getAdjustedBaseTime(baseTime);
+
+            baseTime = getAdjustedBaseTime(baseTime); // 이전 base_time 가져오기
+            if (baseTime.equals("2300")) { // 모든 base_time을 확인했으면 하루 전 데이터 사용
+                usePreviousDay = true;
+                baseDate = getBaseDate(baseTime, usePreviousDay);
+            }
+
             response = requestWeatherData(baseDate, baseTime, nx, ny, encodedServiceKey);
-        }
 
-        // 🚨 3️⃣ `NO_DATA` 발생 시 `base_date` 하루 전으로 바꿔서 재요청
-        if (response == null || !isValidResponse(response)) {
-            System.out.println("🚨 NO DATA! Trying previous day's data...");
-            usePreviousDay = true;
-            baseDate = getBaseDate(baseTime, usePreviousDay);
-            response = requestWeatherData(baseDate, baseTime, nx, ny, encodedServiceKey);
-        }
-
-        // 🚨 4️⃣ `NO_DATA` 발생 시 주변 좌표로 재요청
-        if (response == null || !isValidResponse(response)) {
-            System.out.println("🚨 API NO DATA! Retrying with adjusted coordinates...");
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    if (dx == 0 && dy == 0) continue; // 이미 요청한 값은 제외
-                    int newNx = nx + dx;
-                    int newNy = ny + dy;
-                    System.out.println("🔄 재요청: nx=" + newNx + ", ny=" + newNy);
-
-                    response = requestWeatherData(baseDate, baseTime, newNx, newNy, encodedServiceKey);
-
-                    if (response != null && isValidResponse(response)) {
-                        System.out.println("✅ [성공] 기상청 API 데이터 확보 (nx=" + newNx + ", ny=" + newNy + ")");
-                        return response; // 유효한 데이터가 있으면 반환
-                    }
-                }
+            // 만약 유효한 데이터가 나오면 바로 반환
+            if (response != null && isValidResponse(response)) {
+                System.out.println("✅ 최신 기상 데이터 확보 (base_time=" + baseTime + ")");
+                return response;
             }
         }
 
         return Map.of("error", "기상청 API에 해당 좌표의 데이터가 없습니다.");
     }
+
 
 
 
@@ -338,10 +329,13 @@ public class WeatherService {
 
 
     private String getLatestBaseTime() {
+        // 기상청 API에서 제공하는 base_time 목록 (최신 순서)
         String[] availableTimes = {"2300", "2000", "1700", "1400", "1100", "0800", "0500", "0200"};
+
         SimpleDateFormat sdf = new SimpleDateFormat("HHmm");
         int now = Integer.parseInt(sdf.format(new Date()));
 
+        // 현재 시간보다 작은 base_time 중 가장 최근 것을 선택
         for (String time : availableTimes) {
             if (now >= Integer.parseInt(time)) {
                 System.out.println("⏰ 선택된 base_time: " + time);
@@ -349,10 +343,10 @@ public class WeatherService {
             }
         }
 
-        // 기본값 (오전 2시 이전이라면 전날 23:00 데이터 사용)
-        System.out.println("⏰ 현재 시간이 02:00 이전이므로 전날 23:00 데이터 사용");
+        // 기본값: 02:00 이전이면 전날 23:00 데이터 사용
         return "2300";
     }
+
 
 
     private String getBaseDate(String baseTime, boolean usePreviousDay) {
