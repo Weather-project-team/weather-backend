@@ -90,69 +90,37 @@ public class WeatherService {
     public String findClosestCity(double userLat, double userLon) {
         int[] userGrid = latitudeLongitudeToGrid(userLat, userLon);
 
-        // 🚀 이미 adjustCoordinatesToNearestGrid()에서 가장 가까운 도시를 반환하도록 수정
-        return adjustCoordinatesToNearestGrid(userGrid[0], userGrid[1]);
+        System.out.println("✅ [GPS 확인] 받은 위도: " + userLat + ", 경도: " + userLon);
+        System.out.println("✅ [격자 변환] 변환된 nx: " + userGrid[0] + ", ny: " + userGrid[1]);
+
+        // 🚀 가장 가까운 도시 찾기
+        String closestCity = adjustCoordinatesToNearestGrid(userGrid[0], userGrid[1]);
+        System.out.println("🎯 [결과] 최종 선택된 도시: " + closestCity);
+
+        return closestCity;
     }
 
+
     private String adjustCoordinatesToNearestGrid(int nx, int ny) {
+        System.out.println("🚀 [도시 매칭] 현재 격자 좌표: nx=" + nx + ", ny=" + ny);
+
         String closestCity = null;
         double minDistance = Double.MAX_VALUE;
-        Integer closestNx = null; // ✅ 숫자 비교 전 null 체크
-        Integer closestNy = null; // ✅ 숫자 비교 전 null 체크
-
-        System.out.println("🚀 [디버깅] 현재 GPS 변환된 좌표: nx=" + nx + ", ny=" + ny);
 
         for (Map.Entry<String, Integer[]> entry : cityCoordinates.entrySet()) {
             int gridNx = entry.getValue()[0];
             int gridNy = entry.getValue()[1];
             String city = entry.getKey();
 
-            // ✅ 현재 좌표(nx, ny)에서 ±2 이상 차이나면 비교 대상에서 제외
-            if (Math.abs(nx - gridNx) > 2 || Math.abs(ny - gridNy) > 2) {
-                continue;
-            }
-
-            // 🚀 유클리드 거리 계산
             double distance = Math.sqrt(Math.pow(nx - gridNx, 2) + Math.pow(ny - gridNy, 2));
 
-            System.out.println("🔍 [비교 대상] " + city + " | JSON 좌표: (" + gridNx + ", " + gridNy + ") | 거리: " + distance);
-
-            // ✅ 가장 가까운 거리 업데이트
             if (distance < minDistance) {
                 minDistance = distance;
                 closestCity = city;
-                closestNx = gridNx;
-                closestNy = gridNy;
-            }
-            // ✅ 거리가 같은 경우, nx와 ny 기준 적용
-            else if (distance == minDistance) {
-                // 1️⃣ nx가 현재 위치(nx)와 같은 경우 선택 (null 체크 추가)
-                if (closestNx == null || (gridNx == nx && closestNx != nx)) {
-                    closestCity = city;
-                    closestNx = gridNx;
-                    closestNy = gridNy;
-                }
-                // 2️⃣ nx까지 같다면, ny가 더 가까운 곳 선택 (null 체크 추가)
-                else if (gridNx == closestNx && closestNy != null && Math.abs(ny - gridNy) < Math.abs(ny - closestNy)) {
-                    closestCity = city;
-                    closestNy = gridNy;
-                }
             }
         }
-
-        // ✅ 에러 방지를 위해 null 체크 후 반환
-        if (closestCity == null) {
-            System.err.println("🚨 [오류] 가까운 도시를 찾지 못했습니다. 기본값 반환.");
-            return "위치 찾기 실패";
-        }
-
-        System.out.println("🎯 [결과] 선택된 가장 가까운 도시: " + closestCity);
         return closestCity;
     }
-
-
-
-
 
 
     private int[] latitudeLongitudeToGrid(double lat, double lon) {
@@ -173,13 +141,15 @@ public class WeatherService {
         if (theta < -Math.PI) theta += 2.0 * Math.PI;
         theta *= sn;
 
-        // ✅ **여기에서 반올림 처리 (`Math.round()`)로 격자 좌표 정밀도 개선**
         int x = (int) Math.round(ra * Math.sin(theta) + XO);
         int y = (int) Math.round(ro - ra * Math.cos(theta) + YO);
 
-        System.out.println("✅ 변환된 격자 좌표 (수정 후): nx=" + x + ", ny=" + y);
+        // ✅ 좌표 변환 결과 확인 로그 추가
+        System.out.println("✅ [좌표 변환] 위도: " + lat + ", 경도: " + lon + " → 격자 nx: " + x + ", ny: " + y);
+
         return new int[]{x, y};
     }
+
 
 
 
@@ -283,8 +253,9 @@ public class WeatherService {
 
 
     private Map<String, Object> getWeatherData(String city) {
-        String baseDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+        boolean usePreviousDay = false; // 🚀 처음에는 현재 날짜 사용
         String baseTime = getLatestBaseTime();
+        String baseDate = getBaseDate(baseTime, usePreviousDay);
 
         Integer[] coordinates = cityCoordinates.getOrDefault(city, new Integer[]{60, 127});
         int nx = coordinates[0];
@@ -292,31 +263,47 @@ public class WeatherService {
 
         String encodedServiceKey = URLEncoder.encode(SERVICE_KEY, StandardCharsets.UTF_8);
 
-        // 🚀 1️⃣ 최초 요청
+        // ✅ 1️⃣ 최초 요청
         Map<String, Object> response = requestWeatherData(baseDate, baseTime, nx, ny, encodedServiceKey);
 
-        // 🚨 2️⃣ 만약 NO_DATA가 발생하면 ny 값을 ±1 조정하여 다시 요청
+        // 🚨 2️⃣ `NO_DATA` 발생 시 `base_time` 조정 후 재요청
         if (response == null || !isValidResponse(response)) {
-            System.out.println("🚨 API NO DATA! Retrying with adjusted coordinates...");
-
-            for (int offset = -1; offset <= 1; offset++) {
-                if (offset == 0) continue; // 이미 요청한 값은 제외
-
-                int newNy = ny + offset;
-                System.out.println("🔄 재요청: nx=" + nx + ", ny=" + newNy);
-
-                response = requestWeatherData(baseDate, baseTime, nx, newNy, encodedServiceKey);
-
-                if (response != null && isValidResponse(response)) {
-                    return response; // 유효한 데이터가 있으면 반환
-                }
-            }
-
-            return Map.of("error", "기상청 API에 해당 좌표의 데이터가 없습니다.");
+            System.out.println("🚨 NO DATA! Trying an earlier base_time...");
+            baseTime = getAdjustedBaseTime(baseTime);
+            response = requestWeatherData(baseDate, baseTime, nx, ny, encodedServiceKey);
         }
 
-        return response;
+        // 🚨 3️⃣ `NO_DATA` 발생 시 `base_date` 하루 전으로 바꿔서 재요청
+        if (response == null || !isValidResponse(response)) {
+            System.out.println("🚨 NO DATA! Trying previous day's data...");
+            usePreviousDay = true;
+            baseDate = getBaseDate(baseTime, usePreviousDay);
+            response = requestWeatherData(baseDate, baseTime, nx, ny, encodedServiceKey);
+        }
+
+        // 🚨 4️⃣ `NO_DATA` 발생 시 주변 좌표로 재요청
+        if (response == null || !isValidResponse(response)) {
+            System.out.println("🚨 API NO DATA! Retrying with adjusted coordinates...");
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    if (dx == 0 && dy == 0) continue; // 이미 요청한 값은 제외
+                    int newNx = nx + dx;
+                    int newNy = ny + dy;
+                    System.out.println("🔄 재요청: nx=" + newNx + ", ny=" + newNy);
+
+                    response = requestWeatherData(baseDate, baseTime, newNx, newNy, encodedServiceKey);
+
+                    if (response != null && isValidResponse(response)) {
+                        System.out.println("✅ [성공] 기상청 API 데이터 확보 (nx=" + newNx + ", ny=" + newNy + ")");
+                        return response; // 유효한 데이터가 있으면 반환
+                    }
+                }
+            }
+        }
+
+        return Map.of("error", "기상청 API에 해당 좌표의 데이터가 없습니다.");
     }
+
 
 
     private Map<String, Object> requestWeatherData(String baseDate, String baseTime, int nx, int ny, String encodedServiceKey) {
@@ -336,15 +323,49 @@ public class WeatherService {
             Map<String, Object> response = restTemplate.getForObject(uri, Map.class);
 
             if (response == null || !response.containsKey("response")) {
+                System.out.println("🚨 기상청 API NO_DATA (nx=" + nx + ", ny=" + ny + ")");
                 return Map.of("error", "NO_DATA");
             }
 
-            System.out.println("🔍 기상청 API 응답 데이터 (nx=" + nx + ", ny=" + ny + "): " + response);
+            System.out.println("🔍 기상청 API 응답 데이터 (nx=" + nx + ", ny=" + ny + ", baseTime=" + baseTime + "): " + response);
             return response;
         } catch (Exception e) {
             System.err.println("🚨 API 호출 중 오류 발생: " + e.getMessage());
             return Map.of("error", "날씨 데이터를 가져오지 못했습니다.");
         }
+    }
+
+
+
+    private String getLatestBaseTime() {
+        String[] availableTimes = {"2300", "2000", "1700", "1400", "1100", "0800", "0500", "0200"};
+        SimpleDateFormat sdf = new SimpleDateFormat("HHmm");
+        int now = Integer.parseInt(sdf.format(new Date()));
+
+        for (String time : availableTimes) {
+            if (now >= Integer.parseInt(time)) {
+                System.out.println("⏰ 선택된 base_time: " + time);
+                return time;
+            }
+        }
+
+        // 기본값 (오전 2시 이전이라면 전날 23:00 데이터 사용)
+        System.out.println("⏰ 현재 시간이 02:00 이전이므로 전날 23:00 데이터 사용");
+        return "2300";
+    }
+
+
+    private String getBaseDate(String baseTime, boolean usePreviousDay) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+        Calendar calendar = Calendar.getInstance();
+
+        // ✅ 만약 `usePreviousDay`가 true이면 하루 전으로 설정
+        if (usePreviousDay) {
+            calendar.add(Calendar.DATE, -1);
+            System.out.println("🗓️ 전날 데이터로 변경: " + dateFormat.format(calendar.getTime()));
+        }
+
+        return dateFormat.format(calendar.getTime());
     }
 
     private boolean isValidResponse(Map<String, Object> response) {
@@ -360,20 +381,20 @@ public class WeatherService {
         return true;
     }
 
+    private String getAdjustedBaseTime(String currentBaseTime) {
+        String[] availableTimes = {"2300", "2000", "1700", "1400", "1100", "0800", "0500", "0200"};
 
-    private String getLatestBaseTime() {
-        String[] availableTimes = {"0200", "0500", "0800", "1100", "1400", "1700", "2000", "2300"};
-        SimpleDateFormat sdf = new SimpleDateFormat("HHmm");
-        int now = Integer.parseInt(sdf.format(new Date()));
-
-        String latestTime = "0200";
-        for (String time : availableTimes) {
-            if (now >= Integer.parseInt(time)) {
-                latestTime = time;
-            } else {
-                break;
+        for (int i = availableTimes.length - 1; i >= 0; i--) {
+            if (availableTimes[i].equals(currentBaseTime) && i > 0) {
+                System.out.println("⏪ `NO_DATA`, 이전 base_time 사용: " + availableTimes[i - 1]);
+                return availableTimes[i - 1]; // 이전 base_time 반환
             }
         }
-        return latestTime;
+
+        // 만약 더 이상 이전 시간이 없으면 가장 마지막 시간(`2300`) 사용
+        System.out.println("⏪ `NO_DATA`, 사용 가능한 base_time 없음 → 기본값 2300 사용");
+        return "2300";
     }
+
+
 }
