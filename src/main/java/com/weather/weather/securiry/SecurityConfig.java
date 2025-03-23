@@ -23,14 +23,14 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler((request, response, authentication) -> {
-                            response.sendRedirect("http://localhost:5173/oauth2/redirect");
+                            response.sendRedirect("http://116.34.191.73:3100/oauth2/redirect");
                         })
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessHandler((request, response, authentication) -> {
                             response.setStatus(200);
-                            response.sendRedirect("http://localhost:5173");
+                            response.sendRedirect("http://116.34.191.73:3100");
                         })
                 );
 
@@ -40,7 +40,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of("http://116.34.191.73:3100"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

@@ -23,7 +23,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         String provider = userRequest.getClientRegistration().getRegistrationId(); // google, kakao
         String providerId = getProviderId(oauth2User, provider);
-        String nickname = oauth2User.getAttribute("name");
+        String nickname = getNickname(oauth2User, provider);
         String profileImage = getProfileImage(oauth2User, provider);
 
         User user = userRepository.findByProviderAndProviderId(provider, providerId)
@@ -49,11 +49,22 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return null;
     }
 
+    private String getNickname(OAuth2User oauth2User, String provider) {
+        if ("google".equals(provider)) {
+            return oauth2User.getAttribute("name");
+        } else if ("kakao".equals(provider)) {
+            Map<String, Object> properties = oauth2User.getAttribute("properties");
+            return properties != null ? properties.get("nickname").toString() : "unknown";
+        }
+        return "unknown";
+    }
+
     private String getProfileImage(OAuth2User oauth2User, String provider) {
         if ("google".equals(provider)) {
             return oauth2User.getAttribute("picture");
         } else if ("kakao".equals(provider)) {
-            return ((Map<String, Object>) oauth2User.getAttribute("properties")).get("profile_image").toString();
+            Map<String, Object> properties = oauth2User.getAttribute("properties");
+            return properties != null ? properties.get("profile_image").toString() : null;
         }
         return null;
     }
